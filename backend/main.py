@@ -1,7 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# Iremos importar os roteadores que criaremos no próximo passo
-# from .routers import users, reports # Ainda não existem, mas vamos prepará-los!
+# --- IMPORTAÇÕES DO BANCO ---
+import models 
+from database import engine 
+# --- IMPORTAÇÕES DO ROUTER (CORREÇÃO AQUI) ---
+# Importa o módulo users *diretamente* do arquivo users.py
+from routers.users import router as users_router
+# Importa o módulo reports *diretamente* do arquivo reports.py
+from routers.reports import router as reports_router 
+# --- FIM DAS CORREÇÕES ---
+
+
+# CRIAÇÃO DAS TABELAS NO BANCO DE DADOS (Executado uma única vez)
+models.Base.metadata.create_all(bind=engine) 
 
 # 1. Cria a instância principal do aplicativo FastAPI
 app = FastAPI(
@@ -11,26 +22,24 @@ app = FastAPI(
 )
 
 # 2. Configuração do CORS (Cross-Origin Resource Sharing)
-# Permite que nosso Frontend React (rodando em outra porta) se comunique com esta API.
 origins = [
-    # Permitir o acesso do frontend em desenvolvimento local (porta padrão do Vite/React)
     "http://localhost",
     "http://localhost:3000",
     "http://localhost:5173",
-    # Adicione aqui o domínio de produção no futuro (ex: 'https://sri-frontend.vercel.app')
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins, # Lista de origens permitidas
-    allow_credentials=True, # Permitir cookies e cabeçalhos de autorização
-    allow_methods=["*"], # Permitir todos os métodos (GET, POST, PUT, DELETE, etc.)
-    allow_headers=["*"], # Permitir todos os cabeçalhos
+    allow_origins=origins, 
+    allow_credentials=True, 
+    allow_methods=["*"], 
+    allow_headers=["*"], 
 )
 
-# 3. Inclusão dos Roteadores (Comente por enquanto, vamos criá-los no próximo passo)
-# app.include_router(users.router, prefix="/api/v1/users", tags=["Usuários"])
-# app.include_router(reports.router, prefix="/api/v1/reports", tags=["Relatórios"])
+# 3. Inclusão dos Roteadores (CORREÇÃO AQUI)
+# Usamos o 'users_router' e 'reports_router' que definimos na importação.
+app.include_router(users_router, prefix="/api/v1/users", tags=["Usuários"])
+app.include_router(reports_router, prefix="/api/v1/reports", tags=["Relatórios"])
 
 # 4. Rota Raiz (Hello World, mantida para teste de saúde)
 @app.get("/", tags=["Status"])
@@ -41,9 +50,3 @@ def read_root():
 @app.get("/status", tags=["Status"])
 def get_status():
     return {"status": "online", "service": "SRi API", "version": "1.0.0"}
-
-
-# Documentação:
-# - `CORSMiddleware`: É o componente que lida com a segurança de comunicação entre domínios.
-# - `allow_origins`: É a lista dos endereços que têm permissão para acessar a API. Colocamos o localhost com portas comuns do React.
-# - `prefix="/api/v1/users"`: É a convenção de prefixar as rotas por `/api/v1` (API Version 1) e depois pela funcionalidade (users, reports).
